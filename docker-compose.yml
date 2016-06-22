@@ -1,0 +1,19 @@
+###########################################################################
+# Local Docker Registry Mirror
+#
+# Laurent Malvert <laurent.malvert@gmail.com>
+# https://github.com/laurent-malvert/docker-registry-proxy-cache
+###########################################################################
+
+version: '2'
+
+
+services:
+
+  registry:
+    restart: always
+    image: registry:2
+    ports:
+      - 5000:5000
+    volumes:
+      - ./config:/etc/docker/registry:rw
