@@ -10,22 +10,18 @@ Docker Registry on Mac OS X hosts (and others).
 
 ###Prepared Setup
 
-You can clone the following repository to get a pre-configured setup, as described in the next section:
+You can clone the following repository to get a pre-configured setup, as described
+in the next section:
 
-```
     https://github.com/laurent-malvert/docker-registry-proxy-cache
-```
-
 
 Simply do:
 
-```
-  # clone repository
-  git clone https://github.com/laurent-malvert/docker-registry-proxy-cache.git
-
-  # invoke auto-deployment script
-  ./docker-registry-proxy-cache/machine-create-registry.sh
-```
+    # clone repository
+    git clone https://github.com/laurent-malvert/docker-registry-proxy-cache.git
+  
+    # invoke auto-deployment script
+    ./docker-registry-proxy-cache/machine-create-registry.sh
 
 ### Manual / Explained Setup
 
@@ -250,9 +246,9 @@ We can verify that this works accordingly:
 # References
 
  * Registry Configuration:
- ** Registry Configuration Reference: https://docs.docker.com/registry/configuration/
- ** Registry Deployment Guide: https://docs.docker.com/registry/deploying/
- ** Insecure Registry Setup Addendum: https://docs.docker.com/registry/insecure/
- ** Registry Proxy Cache / Registry Mirror Setup Tutorial: https://blog.docker.com/2015/10/registry-proxy-cache-docker-open-source/
+   * Registry Configuration Reference: https://docs.docker.com/registry/configuration/
+   * Registry Deployment Guide: https://docs.docker.com/registry/deploying/
+   * Insecure Registry Setup Addendum: https://docs.docker.com/registry/insecure/
+   * Registry Proxy Cache / Registry Mirror Setup Tutorial: https://blog.docker.com/2015/10/registry-proxy-cache-docker-open-source/
  * Other useful things:
- ** http://stackoverflow.com/questions/26424338/docker-daemon-config-file-on-boot2docker
+   * http://stackoverflow.com/questions/26424338/docker-daemon-config-file-on-boot2docker
