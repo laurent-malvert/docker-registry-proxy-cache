@@ -13,11 +13,9 @@ REGISTRY_MACHINE_NAME="${1:-registry-proxy-cache}"
 
 docker-machine rm "${REGISTRY_MACHINE_NAME}"
 
-docker-machine create                              \
-  --driver "xhyve"                                 \
-  --xhyve-experimental-nfs-share                   \
-  --engine-insecure-registry "localhost:5000"      \
-  --engine-registry-mirror "http://localhost:5000" \
+docker-machine create                                \
+  --engine-insecure-registry "http://localhost:5000" \
+  --engine-registry-mirror "http://localhost:5000"   \
   "${REGISTRY_MACHINE_NAME}"
 
 eval "$(docker-machine env ${REGISTRY_MACHINE_NAME})"

@@ -1,17 +1,15 @@
 # docker-registry-proxy-cache
 
-A simple script + docker-compose setup to auto-deploy a local proxy of the
-Docker Registry on Mac OS X hosts (and others).
+A simple script + docker-compose setup to auto-deploy a local proxy (or mirror)
+of the Docker Registry on Mac OS X hosts (and others).
 
 
-# Configuration
+# Registry Mirror Configuration
 
-## Registry Proxy Setup
+## Prepared Setup
 
-###Prepared Setup
-
-You can clone the following repository to get a pre-configured setup, as described
-in the next section:
+You can clone the following repository to get a pre-configured setup, as
+described in the next section:
 
     https://github.com/laurent-malvert/docker-registry-proxy-cache
 
@@ -19,61 +17,75 @@ Simply do:
 
     # clone repository
     git clone https://github.com/laurent-malvert/docker-registry-proxy-cache.git
-  
-    # invoke auto-deployment script
+
+    # If using docker-machines, invoke:
     ./docker-registry-proxy-cache/machine-create-registry.sh
 
-### Manual / Explained Setup
+    # If using native docker, invoke simply
+    docker-compose up -d
 
-#### Structure
+## Manual / Explained Setup
+
+These instructions explain how this setup was first created, if
+you want to redo it from scratch.
+
+### Structure
 
 At the end of this configuration, we will have a local setup with the following
 structure, which can be used to recreate a local-registry at will (similar to
 what is on the repo mentioned in the previous section):
 
 
+```
     docker-registry-proxy-cache
-    |-- config/
+    |-- config/                # where your registry config will live
     |   `-- config.yml
+    |-- data/                  # where your registry data (the images) will live
     |-- docker-compose.yml
     `-- machine-create-registry.sh
+```
 
-#### Steps
+### Steps
 
- 1. We set up a docker-machine to host our local docker registry (pick either
-    approach, and tweak disk/memory/cpu settings as you wish):
+Note: the steps show how to create a custom docker-machine for this setup.
+You don't have to do this if you want your registry to be hosted
+on your normal native environment, however generally it'd make
+sense to want your mirror to be separate from your other containers.
 
-        # w/ VirtualBox host-VM
-        docker-machine create                           \
-          --driver virtualbox                           \
-          --engine-insecure-registry registry:5000      \
-          --engine-registry-mirror http://registry:5000 \
-          registry-proxy-cache
-        
-        # w/ hyve host-VM
-        docker-machine create                            \
-          --driver xhyve                                 \
-          --xhyve-experimental-nfs-share                 \
-          --engine-insecure-registry localhost:5000      \
-          --engine-registry-mirror http://localhost:5000 \
-          registry-proxy-cache
+ 1. We set up a docker-machine to host our local docker registry (tweak
+    disk/memory/cpu/driver settings as you wish following these examples):
+
+           # w/ VirtualBox host-VM
+           docker-machine create                           \
+             --driver virtualbox                           \
+             --engine-insecure-registry registry:5000      \
+             --engine-registry-mirror http://registry:5000 \
+             registry-proxy-cache
+
+           # w/ hyve host-VM
+           docker-machine create                            \
+             --driver xhyve                                 \
+             --xhyve-experimental-nfs-share                 \
+             --engine-insecure-registry localhost:5000      \
+             --engine-registry-mirror http://localhost:5000 \
+             registry-proxy-cache
 
  2. We set our shell's environment variables to allow the docker daemon to talk
     to the machine:
 
         eval "$(docker-machine env registry-proxy-cache)"
 
- 3. We grab the config.yml file from the official remote repository:
+ 3. We grab the `config.yml` file from the official remote repository:
 
         # create folder structure
         mkdir docker-registry-proxy-cache
         mkdir docker-registry-proxy-cache/config
-        
+
         # grab default registry configuration
         docker run -it --rm                                             \
             --entrypoint cat registry:2 /etc/docker/registry/config.yml \
           > docker-registry-proxy-cache/config/config.yml.template
-        
+
         # copy configuration to tweak for our own local registry
         cp \
           docker-registry-proxy-cache/config/config.yml.template \
@@ -92,28 +104,46 @@ what is on the repo mentioned in the previous section):
  5. Then we setup a registry environment using this
     registry-proxy-cache/docker-compose.yml config:
 
-        #docker-compose.yml
-        ###########################################################################
-        # Local Docker Registry Mirror
-        ###########################################################################
-        version: '2'
-        services:
-          registry:
-            restart: always
-            image: registry:2
-            ports:
-              - 5000:5000
-            volumes:
-              - ./config:/etc/docker/registry:rw
+```
+###########################################################################
+# Local Docker Registry Mirror
+#
+# Laurent Malvert <laurent.malvert@gmail.com>
+# https://github.com/laurent-malvert/docker-registry-proxy-cache
+###########################################################################
+
+version: '2.1'
+
+
+services:
+
+  registry:
+    restart: always
+    image: registry:latest
+    ports:
+      - 5000:5000
+    volumes:
+      - ./config:/etc/docker/registry:ro
+      - ./data:/var/lib/registry:rw
+```
 
  6. We can then start our registry mirror:
 
         docker-compose up -d
 
-#### Automated Script
+# Execution
+
+## For a Local Native Setup
+
+Again, no need to use docker machines if you just want to run the registry
+mirror in your native environment. Simply invoke `docker-compose up -d` then,
+and go your merry way without tweaking much.
+
+## For a Multi Machine Setup
 
 Once you have the setup above, you can use this script to automate the tear-down
 and recreation of a registry.
+
 
 *Beware, it will kill any pre-existing machine first!*
 
@@ -125,28 +155,26 @@ and recreation of a registry.
         # quick-n-dirty local registry proxy cache to speed up image retrieval
         # from disposable docker machines on a Mac OS X system.
         #
-        
+
         DIR="${0%/*}"
-        
-        
+
+
         REGISTRY_MACHINE_NAME="${1:-registry-proxy-cache}"
-        
+
         docker-machine rm "${REGISTRY_MACHINE_NAME}"
-        
-        docker-machine create                              \
-          --driver "xhyve"                                 \
-          --xhyve-experimental-nfs-share                   \
-          --engine-insecure-registry "localhost:5000"      \
-          --engine-registry-mirror "http://localhost:5000" \
+
+        docker-machine create                                \
+          --engine-insecure-registry "http://localhost:5000" \
+          --engine-registry-mirror "http://localhost:5000"   \
           "${REGISTRY_MACHINE_NAME}"
-         
+
         eval "$(docker-machine env ${REGISTRY_MACHINE_NAME})"
-         
+
         docker-compose -f "${DIR}/docker-compose.yml" up -d
- 
+
 Executing the script will produce an output similar to:
 
-        $> ./machine-create-registry.sh                                  
+        $> ./machine-create-registry.sh
         About to remove registry-proxy-cache
         Are you sure? (y/n): y
         (registry-proxy-cache) Stopping registry-proxy-cache ...
@@ -196,52 +224,72 @@ Executing the script will produce an output similar to:
         Status: Downloaded newer image for registry:2
         Creating dockerregistryproxycache_registry_1
 
-## Docker Machines Setup with Registry Proxy
+# Usage (or How to Setup your Docker Machines to Use your Registry Proxy)
 
 Finally we can now tell the docker daemons from other docker-machines to use our
 local registry proxy:
 
-### The Linux Way
+## The Linux Way
 
     docker --insecure-registry --registry-mirror=https://localhost:5000 daemon
- 
-### The  Mac OS X way:
 
-#### On an existing machine (get the REGISTRY_MACHINE_IP from `docker-machine ls`):
+## The  Mac OS X Way (with docker tools)
+
+### On an existing machine (get the REGISTRY_MACHINE_IP from `docker-machine ls`):
 
     docker-machine ssh <my_machine>
     sudo vi /var/lib/boot2docker/profile
     #    add these lines to EXTRA_ARGS:
     #       --insecure-registry REGISTRY_MACHINE_IP:5000
     #       --registry-mirror http://REGISTRY_MACHINE_IP:5000
- 
+
 #### On a new machine, by specifying these arguments to `docker-machine create`,
      as seen above:
 
           --engine-insecure-registry REGISTRY_MACHINE_IP:5000
           --engine-registry-mirror http://REGISTRY_MACHINE_IP:5000
 
-### Verification
+## The Mac OS X Way (with Docker for Mac)
 
-We can verify that this works accordingly:
+Simply configure your Docker for Mac setup via the GUI and setup a mirror with:
 
-#### Check that the local registry is up and running
+    http://localhost:5000 
 
-    curl http://REGISTRY_MACHINE_IP:5000/v2/_catalog
-    # outputs -> {"repositories":[]}
- 
-#### Setup docker host env (if using docker-machine, e.g. on Mac OS X)
+# Verification
 
-    eval "$(docker-machine env A_MACHINE_WITH_PROXY_CONFIGURED)"
- 
-#### Pull down some image
+We can verify that this works accordingly by querying the
+registry before and after pulling an image. If configured correctly,
+after the pull the registry will hold your image.
 
-    docker pull busybox
- 
-#### Check that the image is available in the local registry cache
+ 1. Check that the local registry is up and running
 
-       curl http://REGISTRY_MACHINE_IP:5000/v2/_catalog
-       # outputs -> {"repositories":["library/busybox"]}
+        curl http://REGISTRY_MACHINE_IP:5000/v2/_catalog
+        # outputs -> {"repositories":[]}
+
+ 2. Setup docker host env (if using docker-machine, e.g. on Mac OS X)
+
+        eval "$(docker-machine env A_MACHINE_WITH_PROXY_CONFIGURED)"
+
+ 3. Pull down some image
+
+        docker pull busybox
+
+ 4. Check that the image is available in the local registry cache
+
+        curl http://REGISTRY_MACHINE_IP:5000/v2/_catalog
+        # outputs -> {"repositories":["library/busybox"]}
+
+From then on, if you delete your local image (with `docker rmi`),
+your next pull will be faster by querying your local regsitry.
+
+Note that if you use Docker for Mac and do a reset (e.g. to avoid disk increase
+issues in the current versions), you can simply restart the registry and the
+/data volume will be used, so you won't have to re-download all images.
+
+If disk usage becomes an issue overtime, prune images in /data,
+or delete /data entirely and restart your mirror to start again
+from scratch.
+
 
 # References
 
