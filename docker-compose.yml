@@ -5,7 +5,7 @@
 # https://github.com/laurent-malvert/docker-registry-proxy-cache
 ###########################################################################
 
-version: '2.1'
+version: '3.3'
 
 
 services:
@@ -16,5 +16,14 @@ services:
     ports:
       - 5000:5000
     volumes:
-      - ./config:/etc/docker/registry:ro
-      - ./data:/var/lib/registry:rw
+      - ./config/default/config.yml:/etc/docker/registry/config.yml:ro
+      - ./data/default:/var/lib/registry:rw
+
+  registry-elastic:
+    restart: always
+    image: registry:latest
+    ports:
+      - 5001:5000
+    volumes:
+      - ./config/elastic/config.yml:/etc/docker/registry/config.yml:ro
+      - ./data/elastic:/var/lib/registry:rw
